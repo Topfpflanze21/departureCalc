@@ -40,6 +40,9 @@ class WorkTimerApp(tk.Tk):
         self.minsize(400, 520)
         self.configure(background=BG_COLOR)
 
+        # Set the application icon
+        self.iconphoto(True, tk.PhotoImage(file='images/clock.png'))
+
         # This will hold the calculated departure time as a datetime object
         self.departure_datetime = None
 
