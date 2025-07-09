@@ -100,9 +100,9 @@ class WorkTimerApp(tk.Tk):
     def _initialize_variables(self):
         """Initializes and traces all tkinter control variables."""
         # Using StringVar allows the UI to automatically update when the data changes.
-        self.arrival_var = tk.StringVar(value="08:30")
+        self.arrival_var = tk.StringVar(value="09:00")
         self.work_duration_var = tk.StringVar(value="8.0")
-        self.lunch_break_var = tk.StringVar(value="45")
+        self.lunch_break_var = tk.StringVar(value="30")
 
         # These variables are for display purposes.
         self.departure_time_var = tk.StringVar(value="--:--")
@@ -165,6 +165,24 @@ class WorkTimerApp(tk.Tk):
         footer_frame = ttk.Frame(main_frame)
         footer_frame.grid(row=2, column=0, sticky="ew", pady=(15, 0))
         ttk.Label(footer_frame, textvariable=self.current_time_var, style='CurrentTime.TLabel').pack()
+
+        # --- Add Focus Clearing Bindings ---
+        # A list of widgets that should clear focus when clicked.
+        # This includes frames and any non-interactive child widgets.
+        widgets_to_bind = [
+            main_frame, input_card, output_card, footer_frame,
+            *input_card.winfo_children(),
+            *output_card.winfo_children(),
+            *footer_frame.winfo_children(),
+        ]
+        for widget in widgets_to_bind:
+            # We only bind to non-entry widgets to avoid conflicts.
+            if widget.winfo_class() != 'TEntry':
+                widget.bind("<Button-1>", self._clear_focus)
+
+    def _clear_focus(self, event):
+        """Removes focus from the currently active widget by focusing the root window."""
+        self.focus()
 
     def _recalculate_departure_time(self, *args):
         """
