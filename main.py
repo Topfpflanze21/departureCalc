@@ -32,8 +32,8 @@ class WorkTimerApp(tk.Tk):
 
         # --- Core Setup ---
         self.title("Workday Departure Calculator")
-        self.geometry("420x480")
-        self.minsize(400, 450)
+        self.geometry("420x520")  # Increased height slightly for new layout
+        self.minsize(400, 520)
         self.configure(background=BG_COLOR)
 
         # This will hold the calculated departure time as a datetime object
@@ -68,10 +68,14 @@ class WorkTimerApp(tk.Tk):
         style.configure('TLabel', font=(FONT_FAMILY_PRIMARY, 11))
         style.configure('Header.TLabel', font=(FONT_FAMILY_PRIMARY, 12, 'bold'))
         style.configure('Result.TLabel',
-                        font=(FONT_FAMILY_DISPLAY, 48, 'bold'),
+                        font=(FONT_FAMILY_DISPLAY, 56, 'bold'),  # Increased font size
                         foreground=ACCENT_COLOR)
+        style.configure('TimeLeft.TLabel', font=(FONT_FAMILY_PRIMARY, 11, 'normal'))
         style.configure('Status.TLabel', font=(FONT_FAMILY_PRIMARY, 10, 'italic'))
         style.configure('CurrentTime.TLabel', font=(FONT_FAMILY_PRIMARY, 10, 'normal'))
+
+        # --- Separator Style ---
+        style.configure('HSeparator.TSeparator', background=BG_COLOR)
 
         # --- Entry Widget Style ---
         # Configure the default appearance of the Entry widget.
@@ -102,6 +106,7 @@ class WorkTimerApp(tk.Tk):
 
         # These variables are for display purposes.
         self.departure_time_var = tk.StringVar(value="--:--")
+        self.time_left_var = tk.StringVar(value="")  # New variable for time remaining
         self.status_var = tk.StringVar(value="Enter your details.")
         self.current_time_var = tk.StringVar()
 
@@ -135,18 +140,26 @@ class WorkTimerApp(tk.Tk):
         ttk.Label(input_card, text="Lunch Break (minutes)", background=CARD_COLOR).grid(row=2, column=0, sticky="w")
         ttk.Entry(input_card, textvariable=self.lunch_break_var, justify='center').grid(row=2, column=1, sticky="ew", padx=(15, 0))
 
-        # --- Output Section ---
+        # --- Output Section (Re-designed) ---
         output_card = ttk.Frame(main_frame, style='Card.TFrame', padding=(20, 25))
         output_card.grid(row=1, column=0, sticky="nsew")
 
-        # A wrapper frame to center the output content vertically and horizontally.
-        content_wrapper = ttk.Frame(output_card, style='Card.TFrame')
-        content_wrapper.pack(expand=True)
+        # Configure grid to center content. The rows with weight=1 act as spacers.
+        output_card.rowconfigure(0, weight=1)
+        output_card.rowconfigure(5, weight=1)
+        output_card.columnconfigure(0, weight=1)
 
         # Set the background of labels within the card to match the card color.
-        ttk.Label(content_wrapper, text="ESTIMATED DEPARTURE", style='Header.TLabel', background=CARD_COLOR).pack(pady=(0, 5))
-        ttk.Label(content_wrapper, textvariable=self.departure_time_var, style='Result.TLabel', background=CARD_COLOR).pack()
-        ttk.Label(content_wrapper, textvariable=self.status_var, style='Status.TLabel', background=CARD_COLOR).pack(pady=(10, 0))
+        # All labels are placed in column 0 and will be centered by the column's weight.
+        ttk.Label(output_card, text="ESTIMATED DEPARTURE", style='Header.TLabel', background=CARD_COLOR).grid(row=1, column=0)
+        ttk.Label(output_card, textvariable=self.departure_time_var, style='Result.TLabel', background=CARD_COLOR).grid(row=2, column=0, pady=5)
+
+        # Add a visual separator
+        ttk.Separator(output_card, orient='horizontal', style='HSeparator.TSeparator').grid(row=3, column=0, sticky='ew', padx=20, pady=15)
+
+        # New dedicated label for time remaining
+        ttk.Label(output_card, textvariable=self.time_left_var, style='TimeLeft.TLabel', background=CARD_COLOR).grid(row=4, column=0)
+        ttk.Label(output_card, textvariable=self.status_var, style='Status.TLabel', background=CARD_COLOR).grid(row=5, column=0, sticky='s', pady=(5, 0))
 
         # --- Footer ---
         footer_frame = ttk.Frame(main_frame)
@@ -188,16 +201,14 @@ class WorkTimerApp(tk.Tk):
             self._update_status_message()
 
         except (ValueError, TypeError):
-            # This block catches various errors:
-            # - ValueError from empty strings or bad float/int conversion.
-            # - ValueError from incorrect time format in strptime.
-            # - TypeError if an input is somehow not a string.
+            # This block catches various errors and resets the UI to a waiting state.
             self.departure_datetime = None
             self.departure_time_var.set("--:--")
+            self.time_left_var.set("")  # Clear time left
             self.status_var.set("Waiting for valid input...")
 
     def _update_status_message(self):
-        """Updates the time remaining status message based on the current time."""
+        """Updates the time remaining and status message based on the current time."""
         if not self.departure_datetime:
             return  # Do nothing if we don't have a valid departure time.
 
@@ -212,19 +223,23 @@ class WorkTimerApp(tk.Tk):
         except (ValueError, TypeError):
             # This handles cases where vars are changed to invalid values while the clock is running.
             self.status_var.set("Waiting for valid input...")
+            self.time_left_var.set("")
             return
 
-        # Compare the current time to the key moments of the day.
+        # Compare the current time to the key moments of the day and update UI accordingly.
         if now < arrival_datetime:
+            self.time_left_var.set("")
             self.status_var.set("Your workday has not started yet. ☀️")
         elif now >= self.departure_datetime:
+            self.time_left_var.set("")
             self.status_var.set("Your workday is over. Time to go home! 🎉")
         else:
             # Calculate and display the remaining time.
             time_left = self.departure_datetime - now
             hours, remainder = divmod(time_left.total_seconds(), 3600)
             minutes, _ = divmod(remainder, 60)
-            self.status_var.set(f"Time Remaining: {int(hours)}h {int(minutes)}m ⏳")
+            self.time_left_var.set(f"Time Remaining: {int(hours)}h {int(minutes)}m")
+            self.status_var.set("Work in progress... ⏳")
 
     def _update_clock(self):
         """Updates the current time display and status message every second."""
