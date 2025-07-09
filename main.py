@@ -2,6 +2,41 @@ import tkinter as tk
 from tkinter import ttk
 import datetime
 import json  # Added for saving/loading settings
+import sys
+import os
+
+# This function is correct, keep it as is
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+# --- NEW: Function to get a writable path ---
+def get_persistent_path(filename):
+    """
+    Get a writable path in the user's AppData directory for settings.
+    Creates the directory if it doesn't exist.
+    """
+    # APPDATA is a reliable environment variable on Windows
+    app_data_path = os.getenv('APPDATA')
+    # Fallback to the local directory if APPDATA isn't set
+    if not app_data_path:
+        app_data_path = os.path.abspath(".")
+
+    # Create a dedicated folder for your app to keep things clean
+    app_folder = os.path.join(app_data_path, "WorkdayDepartureCalc")
+    os.makedirs(app_folder, exist_ok=True)
+
+    return os.path.join(app_folder, filename)
+
+# --- Settings Paths ---
+# Path for SAVING and LOADING user-specific settings
+PERSISTENT_SETTINGS_FILE = get_persistent_path("settings.json")
+# Path for the DEFAULT settings bundled with the app
+DEFAULT_SETTINGS_FILE = resource_path("data/settings.json")
 
 # --- Configuration Constants ---
 # Grouping configuration in one place makes it easier to modify the app's appearance.
@@ -19,7 +54,7 @@ FONT_FAMILY_PRIMARY = "Segoe UI"
 FONT_FAMILY_DISPLAY = "Segoe UI Variable Display"  # A more modern font for the main result
 
 # --- Settings File ---
-SETTINGS_FILE = "data/settings.json"
+SETTINGS_FILE = resource_path("data/settings.json")
 
 
 # --- Main Application Class ---
@@ -41,7 +76,7 @@ class WorkTimerApp(tk.Tk):
         self.configure(background=BG_COLOR)
 
         # Set the application icon
-        self.iconphoto(True, tk.PhotoImage(file='images/clock.png'))
+        self.iconphoto(True, tk.PhotoImage(file=resource_path('images/clock.png')))  # <-- Change this line
 
         # This will hold the calculated departure time as a datetime object
         self.departure_datetime = None
@@ -278,28 +313,37 @@ class WorkTimerApp(tk.Tk):
         # Schedule this method to run again after 1000ms (1 second).
         self.after(1000, self._update_clock)
 
-    # --- New Methods for Saving and Loading ---
     def _load_settings(self):
-        """Loads input values from the settings file if it exists."""
+        """Loads settings from the user's persistent file, falling back to the bundled default."""
+        settings_path_to_load = PERSISTENT_SETTINGS_FILE
+
+        if not os.path.exists(settings_path_to_load):
+            settings_path_to_load = DEFAULT_SETTINGS_FILE
+
         try:
-            with open(SETTINGS_FILE, 'r') as f:
+            with open(settings_path_to_load, 'r') as f:
                 settings = json.load(f)
-                # Use .get() to gracefully handle missing keys
-                self.arrival_var.set(settings.get("arrival", "09:00"))
-                self.work_duration_var.set(settings.get("work_duration", "8.0"))
-                self.lunch_break_var.set(settings.get("lunch_break", "30"))
         except (FileNotFoundError, json.JSONDecodeError):
-            # If the file doesn't exist or is corrupted, just use the defaults.
-            pass
+            # If all else fails, use hardcoded defaults
+            settings = {
+                "arrival": "09:00",
+                "work_duration": "8.0",
+                "lunch_break": "30"
+            }
+
+        self.arrival_var.set(settings.get("arrival", "09:00"))
+        self.work_duration_var.set(settings.get("work_duration", "8.0"))
+        self.lunch_break_var.set(settings.get("lunch_break", "30"))
 
     def _save_settings(self):
-        """Saves the current input values to the settings file."""
+        """Saves the current input values to the persistent settings file."""
         settings = {
             "arrival": self.arrival_var.get(),
             "work_duration": self.work_duration_var.get(),
             "lunch_break": self.lunch_break_var.get()
         }
-        with open(SETTINGS_FILE, 'w') as f:
+        # Save to the user's writable AppData folder
+        with open(PERSISTENT_SETTINGS_FILE, 'w') as f:
             json.dump(settings, f, indent=4)
 
     def _on_closing(self):

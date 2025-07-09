@@ -1,2 +1,18 @@
+# Python Virtual Environment
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# PyInstaller generated files
+/build/
+/dist/
+main.spec
+main.exe
+
+# IDE configuration folders (PyCharm, VSCode)
 .idea/
+.vscode/
+
 data
