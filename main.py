@@ -7,29 +7,31 @@ class WorkTimerApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
+        # --- Basic Setup ---
         self.title("Workday Departure Calculator")
-        self.geometry("500x350")
+        self.minsize(500, 350)  # Set a minimum size for usability
 
         # --- Style Configuration ---
         style = ttk.Style(self)
-        # Use a modern theme if available
         available_themes = style.theme_names()
         if 'clam' in available_themes:
             style.theme_use('clam')
 
         # Define colors and fonts
-        BG_COLOR = "#f2f2f2"  # Light gray background
-        FG_COLOR = "#333333"  # Dark gray text
-        ACCENT_COLOR = "#0078d7"  # A nice blue for accents
+        BG_COLOR = "#f2f2f2"
+        FG_COLOR = "#333333"
+        ACCENT_COLOR = "#0078d7"
 
         self.configure(background=BG_COLOR)
         style.configure('.', font=('Segoe UI', 10), background=BG_COLOR, foreground=FG_COLOR)
-        style.configure('TLabel', padding=5)
+        style.configure('TLabel')
         style.configure('TEntry', padding=5)
         style.configure('Header.TLabel', font=('Segoe UI', 11, 'bold'))
-        style.configure('Result.TLabel', font=('Segoe UI', 16, 'bold'), foreground=ACCENT_COLOR)
+        style.configure('Result.TLabel', font=('Segoe UI', 22, 'bold'), foreground=ACCENT_COLOR)
         style.configure('Status.TLabel', font=('Segoe UI', 10, 'italic'))
         style.configure('CurrentTime.TLabel', font=('Segoe UI', 10, 'bold'))
+        # Style for the wrapper frame to ensure it inherits the background color
+        style.configure('Wrapper.TFrame', background=BG_COLOR)
 
         # --- Variables with trace for auto-updating ---
         self.arrival_var = tk.StringVar(value="07:45")
@@ -53,7 +55,8 @@ class WorkTimerApp(tk.Tk):
 
     def create_widgets(self):
         """Creates and places all the GUI widgets."""
-        main_frame = ttk.Frame(self, padding="20")
+        # Main frame configured to expand with the window
+        main_frame = ttk.Frame(self, padding="15")
         main_frame.pack(expand=True, fill=tk.BOTH)
 
         # --- Input Frame ---
@@ -61,27 +64,30 @@ class WorkTimerApp(tk.Tk):
         input_frame.pack(fill=tk.X)
         input_frame.columnconfigure(1, weight=1)  # Makes entry column expandable
 
-        ttk.Label(input_frame, text="Arrival Time (HH:MM):").grid(row=0, column=0, sticky="w")
+        ttk.Label(input_frame, text="Arrival Time (HH:MM):").grid(row=0, column=0, sticky="w", padx=5, pady=5)
         ttk.Entry(input_frame, textvariable=self.arrival_var).grid(row=0, column=1, sticky="ew", pady=3)
 
-        ttk.Label(input_frame, text="Work Duration (hours):").grid(row=1, column=0, sticky="w")
+        ttk.Label(input_frame, text="Work Duration (hours):").grid(row=1, column=0, sticky="w", padx=5, pady=5)
         ttk.Entry(input_frame, textvariable=self.work_duration_var).grid(row=1, column=1, sticky="ew", pady=3)
 
-        ttk.Label(input_frame, text="Lunch Break (minutes):").grid(row=2, column=0, sticky="w")
+        ttk.Label(input_frame, text="Lunch Break (minutes):").grid(row=2, column=0, sticky="w", padx=5, pady=5)
         ttk.Entry(input_frame, textvariable=self.lunch_break_var).grid(row=2, column=1, sticky="ew", pady=3)
 
         # --- Separator ---
         ttk.Separator(main_frame, orient='horizontal').pack(fill='x', pady=15)
 
-        # --- Output Frame ---
+        # --- Output Frame (this will expand to fill space) ---
         output_frame = ttk.Frame(main_frame)
-        output_frame.pack(fill=tk.X)
-        output_frame.columnconfigure(0, weight=1)  # Center align content
+        output_frame.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(output_frame, textvariable=self.current_time_var, style='CurrentTime.TLabel').pack()
-        ttk.Label(output_frame, text="Estimated Departure Time", style='Header.TLabel').pack(pady=(10, 0))
-        ttk.Label(output_frame, textvariable=self.departure_time_var, style='Result.TLabel').pack()
-        ttk.Label(output_frame, textvariable=self.status_var, style='Status.TLabel').pack(pady=(10, 0))
+        # --- Wrapper to keep content centered ---
+        content_wrapper = ttk.Frame(output_frame, style='Wrapper.TFrame')
+        content_wrapper.pack(expand=True)  # This centers the frame
+
+        ttk.Label(content_wrapper, textvariable=self.current_time_var, style='CurrentTime.TLabel').pack()
+        ttk.Label(content_wrapper, text="Estimated Departure Time", style='Header.TLabel').pack(pady=(15, 0))
+        ttk.Label(content_wrapper, textvariable=self.departure_time_var, style='Result.TLabel').pack(pady=(0, 10))
+        ttk.Label(content_wrapper, textvariable=self.status_var, style='Status.TLabel').pack(pady=(10, 0))
 
     def _update_calculation(self, *args):
         """Calculates departure time based on user input."""
@@ -134,7 +140,6 @@ class WorkTimerApp(tk.Tk):
                 minutes, _ = divmod(remainder, 60)
                 self.status_var.set(f"Time Remaining: {int(hours)}h {int(minutes)}m ⏳")
         except ValueError:
-            # Catches error if duration fields are invalid during an update
             self.status_var.set("Waiting for valid input...")
 
     def update_clock(self):
