@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import datetime
+import json  # Added for saving/loading settings
 
 # --- Configuration Constants ---
 # Grouping configuration in one place makes it easier to modify the app's appearance.
@@ -16,6 +17,9 @@ INVALID_BG = "#7f2a2a"  # Background color for invalid entry fields
 # Font Palette
 FONT_FAMILY_PRIMARY = "Segoe UI"
 FONT_FAMILY_DISPLAY = "Segoe UI Variable Display"  # A more modern font for the main result
+
+# --- Settings File ---
+SETTINGS_FILE = "data/settings.json"
 
 
 # --- Main Application Class ---
@@ -40,13 +44,18 @@ class WorkTimerApp(tk.Tk):
         self.departure_datetime = None
 
         # --- Initialization ---
-        self._setup_styles()
         self._initialize_variables()
+        self._load_settings()  # Load saved settings before creating widgets
+        self._setup_styles()
         self._create_widgets()
 
         # --- Initial State ---
         self._recalculate_departure_time()  # Perform an initial calculation on startup
         self._update_clock()  # Start the live clock
+
+        # --- Exit Protocol ---
+        # Call the _on_closing method when the window is closed
+        self.protocol("WM_DELETE_WINDOW", self._on_closing)
 
     def _setup_styles(self):
         """Configures all the ttk styles for the application widgets."""
@@ -265,6 +274,35 @@ class WorkTimerApp(tk.Tk):
         self._update_status_message()
         # Schedule this method to run again after 1000ms (1 second).
         self.after(1000, self._update_clock)
+
+    # --- New Methods for Saving and Loading ---
+    def _load_settings(self):
+        """Loads input values from the settings file if it exists."""
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                settings = json.load(f)
+                # Use .get() to gracefully handle missing keys
+                self.arrival_var.set(settings.get("arrival", "09:00"))
+                self.work_duration_var.set(settings.get("work_duration", "8.0"))
+                self.lunch_break_var.set(settings.get("lunch_break", "30"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            # If the file doesn't exist or is corrupted, just use the defaults.
+            pass
+
+    def _save_settings(self):
+        """Saves the current input values to the settings file."""
+        settings = {
+            "arrival": self.arrival_var.get(),
+            "work_duration": self.work_duration_var.get(),
+            "lunch_break": self.lunch_break_var.get()
+        }
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=4)
+
+    def _on_closing(self):
+        """Called when the application window is closed."""
+        self._save_settings()  # Save the current values
+        self.destroy()         # Close the application
 
 
 if __name__ == "__main__":
