@@ -31,7 +31,7 @@ That's it! All necessary libraries (`tkinter`, `datetime`, `json`) are included 
 
 1.  **Clone the repository**:
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git)
+    git clone https://github.com/Topfpflanze21/departure-calculator.git
     cd departureCalc
     ```
 2.  **Run the script** from your terminal:
